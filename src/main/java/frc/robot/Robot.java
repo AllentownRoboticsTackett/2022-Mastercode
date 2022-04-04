@@ -16,6 +16,9 @@ import javax.swing.plaf.TreeUI;
 
 import com.kauailabs.navx.frc.AHRS;
 
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.CvSink;
+import edu.wpi.first.cscore.CvSource;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.util.net.PortForwarder;
@@ -50,6 +53,8 @@ public class Robot extends TimedRobot {
 
 
   private static final String ThreeBallAuto = "Default";
+  private static final String ThreeBallAutoR = "ThreeRight";
+  private static final String ThreeBallAutoL = "ThreeLeft";
   private static final String FourBallAuto = "My Auto";
   private static final String TwoBallAuto = "TwoAuto";
 
@@ -112,7 +117,11 @@ public class Robot extends TimedRobot {
   public static File YsenBase1;
   public static File XsenThree2;
   public static File YsenThree2;
-
+  public static File XsenThree2Right;
+  public static File YsenThree2Right;
+  public static File XsenThree2Left;
+  public static File YsenThree2Left;
+  
   static File XsenFourBase2;
   static File YsenFourBase2;
   static File XsenFour2;
@@ -122,6 +131,10 @@ public class Robot extends TimedRobot {
   static BufferedReader YsenBase1R;
   static BufferedReader XsenThree2R;
   static BufferedReader YsenThree2R;
+  static BufferedReader YsenThree2RightR;
+  static BufferedReader XsenThree2RightR;
+  static BufferedReader YsenThree2LeftR;
+  static BufferedReader XsenThree2LeftR;
 
   static BufferedReader XsenFourBase2R;
   static BufferedReader YsenFourBase2R;
@@ -141,9 +154,17 @@ public class Robot extends TimedRobot {
     //PortForwarder.add(5801, "10.18.7.14", 5801);
     //PortForwarder.add(5802, "10.18.7.14", 5802);
 
+    CameraServer.startAutomaticCapture(0);
+
+
+    CvSink cvSink = CameraServer.getVideo();
+
+    CvSource outputStream = CameraServer.putVideo("test", 640, 480);
 
     m_chooser.addOption("2 Ball Auto", TwoBallAuto);
     m_chooser.setDefaultOption("3 Ball Auto", ThreeBallAuto);
+    m_chooser.addOption("3 Ball Left Auto", ThreeBallAutoL);
+    m_chooser.addOption("3 Ball Right Auto", ThreeBallAutoR);
     m_chooser.addOption("4 Ball Auto", FourBallAuto);
     SmartDashboard.putData("Auto choices", m_chooser);
 
@@ -192,6 +213,10 @@ public class Robot extends TimedRobot {
     YsenBase1 = new File("/home/lvuser/YsenFour1.txt");
     XsenThree2 = new File("/home/lvuser/XsenFour2.txt");
     YsenThree2 = new File("/home/lvuser/YsenFour2.txt");
+    XsenThree2Right = new File("/home/lvuser/XsenFour2R.txt");
+    YsenThree2Right = new File("/home/lvuser/YsenFour2R.txt");
+    XsenThree2Left = new File("/home/lvuser/XsenFour2L.txt");
+    YsenThree2Left = new File("/home/lvuser/YsenFour2L.txt");
 
     XsenFourBase2 = new File("/home/lvuser/XsenFourBall1.txt");
     YsenFourBase2 = new File("/home/lvuser/YsenFourBall1.txt");
@@ -212,6 +237,10 @@ public class Robot extends TimedRobot {
       XsenBase1R = new BufferedReader(new FileReader(XsenBase1));
       YsenThree2R = new BufferedReader(new FileReader(YsenThree2));
       XsenThree2R = new BufferedReader(new FileReader(XsenThree2));
+      YsenThree2RightR = new BufferedReader(new FileReader(YsenThree2Right));
+      XsenThree2RightR = new BufferedReader(new FileReader(XsenThree2Right));
+      YsenThree2LeftR = new BufferedReader(new FileReader(YsenThree2Left));
+      XsenThree2LeftR = new BufferedReader(new FileReader(XsenThree2Left));
 
       YsenFourBase2R = new BufferedReader(new FileReader(YsenFourBase2));
       XsenFourBase2R = new BufferedReader(new FileReader(XsenFourBase2));
@@ -243,7 +272,12 @@ public class Robot extends TimedRobot {
       case ThreeBallAuto:
       ThreeBall();
       break;
-
+      case ThreeBallAutoL:
+      ThreeBallLeft();
+      break;
+      case ThreeBallAutoR:
+      ThreeBallRight();
+      break;
       case TwoBallAuto:
       twoBall();
       break;
@@ -426,11 +460,10 @@ public class Robot extends TimedRobot {
   
   //Driver
   m_Drive.drive(m_DriveController.getLeftY(), m_DriveController.getRightX());
-  m_Drive.RAMP(m_DriveController.getLeftTriggerAxis() > 0.5);
 
   m_Drive.targetLime(m_DriveController.getRightTriggerAxis() > .5);
   Vision.enableLimelight(m_DriveController.getRightTriggerAxis() > .5 || m_OperatController.getPOV() != -1);
-  m_Drive.RAMP(m_DriveController.getRightTriggerAxis() > 0.8);
+  m_Drive.RAMP(m_DriveController.getRightTriggerAxis() > 0.8 || m_DriveController.getLeftTriggerAxis() > 0.5);
 
   Vision.zero(!(m_DriveController.getRightTriggerAxis() > .5));
   if(m_DriveController.getYButtonReleased()) m_Indexer.setIndex();
@@ -462,10 +495,13 @@ public class Robot extends TimedRobot {
 
 
 
-  m_Collector.COLLECT(m_OperatController.getBButton(), m_OperatController.getAButton());
+  m_Collector.COLLECT(m_OperatController.getBButton() || m_OperatController.getYButton(), m_OperatController.getAButton());
   m_Collector.dropped(m_OperatController.getBButton() || m_OperatController.getAButton(), m_doubleSolenoid);
 
-  m_Indexer.COLLECT(m_OperatController.getBButton() || Shoot);
+
+
+
+  m_Indexer.COLLECT(m_OperatController.getBButton() || Shoot || m_OperatController.getXButton() || m_OperatController.getYButton());
   m_Indexer.index();
  // BALLCOLOR = m_Indexer.ColorSensor();
 
@@ -521,7 +557,7 @@ public class Robot extends TimedRobot {
     m_Collector.dropped(true, m_doubleSolenoid);
 
     m_Indexer.COLLECT(true);
-    BALLCOLOR = m_Indexer.ColorSensor();
+    //BALLCOLOR = m_Indexer.ColorSensor();
     m_Collector.COLLECT(true, false);
 
     yJoy = m_DriveController.getLeftY();
@@ -553,7 +589,7 @@ public class Robot extends TimedRobot {
   public void Rumble(int mode) {
     double rpmTarget = m_Shooter.rpmTarget();
     double rpmCurrent = m_Shooter.currentRpm();
-    if (rpmCurrent <= rpmTarget + 15 && rpmCurrent >= rpmTarget - 5 && rpmTarget != 0) {
+    if (rpmCurrent <= rpmTarget + 10 && rpmCurrent >= rpmTarget - 10 && rpmTarget != 0) {
       m_OperatController.setRumble(RumbleType.kLeftRumble, 0.5);
     } else {
       m_OperatController.setRumble(RumbleType.kLeftRumble, 0);
@@ -658,7 +694,7 @@ public class Robot extends TimedRobot {
             //m_Indexer.autoCOLLECT(true,false);
             SmartDashboard.putNumber("x", x);
             Vision.enableLimelight(true);
-            if ( rpmCurrent <= rpmTarget + 20 && rpmCurrent >= rpmTarget - 2 && x <= 30) {
+            if ( rpmCurrent <= rpmTarget + 20 && rpmCurrent >= rpmTarget - 5 && x <= 30 && x >= 10) {
               m_Shooter.feed(true);
             
               x++;
@@ -668,7 +704,7 @@ public class Robot extends TimedRobot {
 
 
 
-            if (x > 30) {
+            if (x > 20) {
               
               m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
               m_Shooter.feed(false);
@@ -716,7 +752,7 @@ public class Robot extends TimedRobot {
           m_Shooter.flywheelRev(270, BALLCOLOR, ALLIANCE, false);
               //m_Indexer.autoCOLLECT(true,false);
               SmartDashboard.putNumber("x", x);
-              if ( rpmCurrent <= rpmTarget + 15 && rpmCurrent >= rpmTarget - 5 && x <= 110) {
+              if ( rpmCurrent <= rpmTarget + 20 && rpmCurrent >= rpmTarget - 5 && x <= 30) {
                 m_Shooter.feed(true);
               
                 x++;}
@@ -749,7 +785,285 @@ public class Robot extends TimedRobot {
     
 }
 
+public static void ThreeBallRight() {
 
+    
+    
+  double rpmTarget = m_Shooter.rpmTarget();
+  double rpmCurrent = m_Shooter.currentRpm();
+  m_Indexer.index();
+  m_Shooter.hood(m_hoodSolenoid);
+  m_Indexer.COLLECT(true);
+ 
+  
+    switch (autoSection) {
+      case 0:
+          m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
+          m_Shooter.feed(false);
+          m_Collector.dropped(true, m_doubleSolenoid);
+
+          //m_Indexer.COLLECT(true);
+          //BALLCOLOR = m_Indexer.ColorSensor();
+          m_Collector.COLLECT(true, false);
+          try{
+
+            yString = YsenBase1R.readLine();
+            xString = XsenBase1R.readLine();
+      
+            SmartDashboard.putString("yString", yString);
+            yJoy = Double.valueOf(yString);
+            SmartDashboard.putNumber("yJoy", yJoy);
+            xJoy = Double.valueOf(xString);
+            SmartDashboard.putNumber("xJoy", xJoy);
+            double yDub = SmartDashboard.getNumber("yJoy", 0);
+            double xDub = SmartDashboard.getNumber("xJoy", 0);
+            if (yJoy != 999) m_Drive.driveTwo(yJoy,xJoy, false);
+            else if(yJoy == 999){ x = 0;
+            autoSection = 1;}
+          } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+          }
+
+        break;
+
+
+      case 1: 
+      m_Shooter.flywheelRev(270, BALLCOLOR, ALLIANCE, false);
+          
+          //m_Indexer.autoCOLLECT(true,false);
+          SmartDashboard.putNumber("x", x);
+          Vision.enableLimelight(true);
+          if ( rpmCurrent <= rpmTarget + 15 && rpmCurrent >= rpmTarget - 5 && x <= 30) {
+            m_Shooter.feed(true);
+          
+            x++;
+          } else {m_Shooter.feed(false);
+            //m_Indexer.autoCOLLECT(false,false);
+          }
+
+
+
+          if (x > 10) {
+            
+            m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
+            m_Shooter.feed(false);
+           // m_Indexer.autoCOLLECT(false,false);
+          autoSection = 2;
+          } 
+          break;
+
+          case 2:
+          m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
+          m_Shooter.feed(false);
+          m_Collector.dropped(true, m_doubleSolenoid);
+
+          //m_Indexer.COLLECT(true);
+          //BALLCOLOR = m_Indexer.ColorSensor();
+          m_Collector.COLLECT(true, false);
+          try{
+
+            yString = YsenThree2RightR.readLine();
+            xString = XsenThree2RightR.readLine();
+      
+            SmartDashboard.putString("yString", yString);
+            yJoy = Double.valueOf(yString);
+            SmartDashboard.putNumber("yJoy", yJoy);
+            xJoy = Double.valueOf(xString);
+            SmartDashboard.putNumber("xJoy", xJoy);
+            double yDub = SmartDashboard.getNumber("yJoy", 0);
+            double xDub = SmartDashboard.getNumber("xJoy", 0);
+            if (yJoy != 999) m_Drive.driveTwo(yJoy,xJoy, false);
+            else if(yJoy == 999) autoSection = 3;
+          } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+          }
+
+        break;
+
+        case 3: 
+
+
+        m_Drive.targetLime(true);
+        Vision.enableLimelight(true);
+
+        m_Drive.driveTwo(0, 0, true);
+        m_Shooter.flywheelRev(270, BALLCOLOR, ALLIANCE, false);
+            //m_Indexer.autoCOLLECT(true,false);
+            SmartDashboard.putNumber("x", x);
+            if ( rpmCurrent <= rpmTarget + 15 && rpmCurrent >= rpmTarget - 5 && x <= 110) {
+              m_Shooter.feed(true);
+            
+              x++;}
+        
+
+              
+              
+             else {m_Shooter.feed(false);
+
+              //m_Indexer.autoCOLLECT(false,false);
+            }
+
+
+
+            if (x > 110) {
+              autoSection++;
+              m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
+              m_Shooter.feed(false);
+             // m_Indexer.autoCOLLECT(false,false);
+  
+            } 
+          break;
+
+      default:
+        m_Collector.COLLECT(false, false);
+      break;
+    }
+
+
+  
+}
+
+public static void ThreeBallLeft() {
+
+    
+    
+  double rpmTarget = m_Shooter.rpmTarget();
+  double rpmCurrent = m_Shooter.currentRpm();
+  m_Indexer.index();
+  m_Shooter.hood(m_hoodSolenoid);
+  m_Indexer.COLLECT(true);
+ 
+  
+    switch (autoSection) {
+      case 0:
+          m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
+          m_Shooter.feed(false);
+          m_Collector.dropped(true, m_doubleSolenoid);
+
+          //m_Indexer.COLLECT(true);
+          //BALLCOLOR = m_Indexer.ColorSensor();
+          m_Collector.COLLECT(true, false);
+          try{
+
+            yString = YsenBase1R.readLine();
+            xString = XsenBase1R.readLine();
+      
+            SmartDashboard.putString("yString", yString);
+            yJoy = Double.valueOf(yString);
+            SmartDashboard.putNumber("yJoy", yJoy);
+            xJoy = Double.valueOf(xString);
+            SmartDashboard.putNumber("xJoy", xJoy);
+            double yDub = SmartDashboard.getNumber("yJoy", 0);
+            double xDub = SmartDashboard.getNumber("xJoy", 0);
+            if (yJoy != 999) m_Drive.driveTwo(yJoy,xJoy, false);
+            else if(yJoy == 999){ x = 0;
+            autoSection = 1;}
+          } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+          }
+
+        break;
+
+
+      case 1: 
+      m_Shooter.flywheelRev(270, BALLCOLOR, ALLIANCE, false);
+          
+          //m_Indexer.autoCOLLECT(true,false);
+          SmartDashboard.putNumber("x", x);
+          Vision.enableLimelight(true);
+          if ( rpmCurrent <= rpmTarget + 20 && rpmCurrent >= rpmTarget - 2 && x <= 30) {
+            m_Shooter.feed(true);
+          
+            x++;
+          } else {m_Shooter.feed(false);
+            //m_Indexer.autoCOLLECT(false,false);
+          }
+
+
+
+          if (x > 20) {
+            
+            m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
+            m_Shooter.feed(false);
+           // m_Indexer.autoCOLLECT(false,false);
+          autoSection = 2;
+          } 
+          break;
+
+          case 2:
+          m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
+          m_Shooter.feed(false);
+          m_Collector.dropped(true, m_doubleSolenoid);
+
+          //m_Indexer.COLLECT(true);
+          //BALLCOLOR = m_Indexer.ColorSensor();
+          m_Collector.COLLECT(true, false);
+          try{
+
+            yString = YsenThree2LeftR.readLine();
+            xString = XsenThree2LeftR.readLine();
+      
+            SmartDashboard.putString("yString", yString);
+            yJoy = Double.valueOf(yString);
+            SmartDashboard.putNumber("yJoy", yJoy);
+            xJoy = Double.valueOf(xString);
+            SmartDashboard.putNumber("xJoy", xJoy);
+            double yDub = SmartDashboard.getNumber("yJoy", 0);
+            double xDub = SmartDashboard.getNumber("xJoy", 0);
+            if (yJoy != 999) m_Drive.driveTwo(yJoy,xJoy, false);
+            else if(yJoy == 999) autoSection = 3;
+          } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+          }
+
+        break;
+
+        case 3: 
+
+
+        m_Drive.targetLime(true);
+        Vision.enableLimelight(true);
+
+        m_Drive.driveTwo(0, 0, true);
+        m_Shooter.flywheelRev(270, BALLCOLOR, ALLIANCE, false);
+            //m_Indexer.autoCOLLECT(true,false);
+            SmartDashboard.putNumber("x", x);
+            if ( rpmCurrent <= rpmTarget + 20 && rpmCurrent >= rpmTarget - 2 && x <= 110) {
+              m_Shooter.feed(true);
+            
+              x++;}
+        
+
+              
+              
+             else {m_Shooter.feed(false);
+
+              //m_Indexer.autoCOLLECT(false,false);
+            }
+
+
+
+            if (x > 110) {
+              autoSection++;
+              m_Shooter.flywheelRev(-1, BALLCOLOR, ALLIANCE, false);
+              m_Shooter.feed(false);
+             // m_Indexer.autoCOLLECT(false,false);
+  
+            } 
+          break;
+
+      default:
+        m_Collector.COLLECT(false, false);
+      break;
+    }
+
+
+  
+}
 
 public static void FourBall() {
 
@@ -800,7 +1114,7 @@ public static void FourBall() {
           //m_Indexer.autoCOLLECT(true,false);
           SmartDashboard.putNumber("x", x);
           Vision.enableLimelight(true);
-          if ( rpmCurrent <= rpmTarget + 20 && rpmCurrent >= rpmTarget - 2 && x <= 30) {
+          if ( rpmCurrent <= rpmTarget + 10 && rpmCurrent >= rpmTarget - 10 && x <= 30) {
             m_Shooter.feed(true);
           
             x++;
@@ -858,7 +1172,7 @@ public static void FourBall() {
         m_Shooter.flywheelRev(270, BALLCOLOR, ALLIANCE, false);
             //m_Indexer.autoCOLLECT(true,false);
             SmartDashboard.putNumber("x", x);
-            if ( rpmCurrent <= rpmTarget + 20 && rpmCurrent >= rpmTarget - 2 && x <= 30) {
+            if ( rpmCurrent <= rpmTarget + 10 && rpmCurrent >= rpmTarget - 10 && x <= 30) {
               m_Shooter.feed(true);
             
               x++;}
