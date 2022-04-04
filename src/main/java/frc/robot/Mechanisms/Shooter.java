@@ -43,13 +43,24 @@ public class Shooter {
 
 
     //double kP = 0.8;
-    double kP = 0.8;
+    
+   // double kP = 0.8;
 
     //double kI = 0.000002;
-    double kI = 0.000003;
+    double kD = 0.00;
 
-    double kD = 0.004;
-    double kF = 0.05;
+    //double kD = 0.008;
+    //double kD = 0.00;
+
+    double kI = 0.000008;
+    //double kP = 0.8;
+    double kP = 0.2;
+
+    double kF = 0.0484;
+
+
+    //double kP = .00026;
+    //double kF = .000164;
     public static double rpmSetpoint;
     public static boolean hoodUp = false;
     Double[][] HoodUpTargeting;
@@ -71,8 +82,8 @@ public class Shooter {
         m_MasterMotor.config_kF(0, kF);
         m_MasterMotor.configPeakOutputForward(1);
         m_MasterMotor.configPeakOutputReverse(-1);
-
-
+        m_MasterMotor.enableVoltageCompensation(true);
+        m_FollowerMotor.enableVoltageCompensation(true);
 
         m_FollowerMotor.follow(m_MasterMotor);
         m_MasterMotor.setInverted(true);
@@ -260,8 +271,11 @@ public class Shooter {
             rpm = 7610;
             //rpm = (500/7)*(distance-193) + 7690;
 
-        } else if (distance < 186 && distance >= 157) {
+        } else if (distance < 186 && distance >= 175) {
             rpm = 7110; //
+            //rpm = (550/29)*(distance-186) + 7180;
+        } else if (distance < 175 && distance >= 157) {
+            rpm = 6800; //
             //rpm = (550/29)*(distance-186) + 7180;
 
         } else if (distance < 157 && distance >= 147) {
